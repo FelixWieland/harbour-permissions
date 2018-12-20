@@ -12,6 +12,7 @@ import (
 var signKey *rsa.PrivateKey
 var server *httpway.Server
 var db *sql.DB
+var secret string
 
 const (
 	privKeyPath = "keys/app.rsa" //openssl genrsa -out app.rsa 1024
@@ -22,6 +23,7 @@ func Start() {
 
 	signKey, _ = harbourauth.LoadAsPrivateRSAKey("")
 	credentials := loadCredentials("../auth.json")
+	secret = "demoSecret"
 
 	if ldb, err := connectToDB(credentials.toString()); err == nil {
 		db = ldb
@@ -34,15 +36,38 @@ func Start() {
 
 	public := router.Middleware(accessLogger)
 	private := public.Middleware(authCheck)
+	nautilus := private.Middleware(nautilusCheck)
 
-	//PRIVATE ROUTES*/
+	//TEST PRIVATE ROUTES*/
 	private.POST("/pvt", testJWTLogin)
-	private.POST("/permissions/list/:userid", permissionsOfUser)
 
-	http.ListenAndServe(":5000", router)
+	/*FOR EVERY USER*/
+	private.POST("/permissions", permissions) //Get a list of all permissions
+	private.POST("/permissions/ofUser/:userID", permissionsOfUser)
+	private.POST("/permissions/ofUser/:userID/groups", permissionGroupsOfUser)
+
+	private.POST("/permissions/getFrom/single/:permissionID/users", usersWithPermission)
+	private.POST("/permissions/getFrom/single/:permissionID/groups", groupsWithPermission)
+	private.POST("/permissions/getFrom/group/:groupID/users", usersWithGroup)
+
+	/*FOR NAUTLIUS USER*/
+	nautilus.POST("/permissions/addTo/user/:userID/single/:permissionID", addPermissionToUser)
+	nautilus.POST("/permissions/addTo/user/:userID/group/:groupID", addGroupToUser)
+	nautilus.POST("/permissions/addTo/group/:groupID/single/:permissionID", addPermissionToGroup)
+
+	nautilus.POST("/permissions/removeFrom/user/:userID/:groupORpermissionID", removeGroupOrPermissionFromUser)
+	nautilus.POST("/permissions/removeFrom/group/:groupID/:permissionID", removePermissionFromGroup)
+
+	nautilus.POST("/permissions/create/group/:groupname", createGroup)
+	nautilus.POST("/permissions/create/permission/:permissionCode", createPermission)
+
+	nautilus.POST("/permissions/delete/group/:groupID", deleteGroup)
+	nautilus.POST("/permissions/delete/permission/:permissionID", deletePermission)
+
+	http.ListenAndServe(":5001", router)
 
 	server = httpway.NewServer(nil)
-	server.Addr = ":5000"
+	server.Addr = ":5001"
 	server.Handler = router
 
 	server.Start()
