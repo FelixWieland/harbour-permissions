@@ -21,7 +21,7 @@ const (
 //Start starts the API Server
 func Start() {
 
-	signKey, _ = harbourauth.LoadAsPrivateRSAKey("")
+	signKey, _ = harbourauth.LoadAsPrivateRSAKey("app/keys/app.rsa")
 	credentials := loadCredentials("../auth.json")
 	secret = "demoSecret"
 

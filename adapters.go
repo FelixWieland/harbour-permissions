@@ -37,15 +37,15 @@ func nautilusCheck(w http.ResponseWriter, r *http.Request) {
 	ctx := httpway.GetContext(r)
 	w.Header().Set("Content-Type", "application/json")
 
-	userid := ctx.Get("userid")
-	_ = userid
-	ctx.Next(w, r)
-}
-
-/*
-func julienHandler() httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		// do stuff
+	claims, err := harbourauth.HarbourJWT(r.FormValue("jwt")).Decode(signKey, "demoSecret")
+	if err != nil {
+		return
 	}
+
+	isnaut := UserID(claims.UserID).IsNautilusDB(db)
+	if isnaut {
+		ctx.Next(w, r)
+	}
+
+	return
 }
-*/
